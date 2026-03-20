@@ -1,0 +1,7 @@
+odds_ratio: 2.0
+p_control: 0.2
+alpha: 0.05
+n_cases_base: 50
+n_total_fixed: 200
+max_ratio: 16
+n_points: 50
