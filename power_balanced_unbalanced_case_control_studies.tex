@@ -3,28 +3,17 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{geometry}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
-
 \geometry{margin=1in}
 
-%% \usepackage{luacode}
-
-%% \begin{luacode}
-%% function normal_cdf(x)
-%%     return 0.5 * (1 + math.erf(x / math.sqrt(2)))
-%% end
-%% \end{luacode}
-
-%% \newcommand{\normalcdf}[1]{%
-%%   \directlua{
-%%     tex.print(normal_cdf(#1))
-%%   }%
-%% }
-
-
 \title{Power and Precision in Balanced vs.\ Unbalanced Case--Control Studies}
-\author{Dieter Best, Bioinformatics Data Scientist, dieterbest@cdph.ca.gov}
+\author{Dieter Best, Bioinformatics Data Scientist, \\
+  dieterbest@cdph.ca.gov \\
+\url{https://github.com/ranlib/power_and_precision_calculation_for_case_control_studies}
+}
 \date{\today}
 
 \begin{document}
@@ -57,105 +46,30 @@ p_1 &= \frac{OR \cdot p_0}{1 - p_0 + OR \cdot p_0} \\
     \item $z_{0.975} = 1.96$
 \end{itemize}
 
-\pgfmathsetmacro{\OR}{2}
-\pgfmathsetmacro{\pzero}{0.2}
-\pgfmathsetmacro{\pone}{(\OR*\pzero)/(1-\pzero+\OR*\pzero)}
-\pgfmathsetmacro{\zcrit}{1.96}
-
-% Variance
-\pgfmathdeclarefunction{varlogor}{2}{%
-    \pgfmathparse{
-        1/(#1*\pone) +
-        1/(#1*(1-\pone)) +
-        1/(#2*\pzero) +
-        1/(#2*(1-\pzero))
-    }
-}
-
-% Power
-\pgfmathdeclarefunction{power}{2}{%
-    % compute Z
-    \pgfmathparse{
-        ln(\OR) /
-        sqrt(varlogor(#1,#2))
-    }
-    \let\zeffect\pgfmathresult
-    % call Lua via wrapper
-    \pgfmathparse{
-        \normalcdf{\zeffect - \zcrit} + \normalcdf{-\zeffect - \zcrit}
-    }
-}
-
-% CI width (on log scale)
-\pgfmathdeclarefunction{ciwidth}{2}{%
-    \pgfmathparse{
-        2 * \zcrit * sqrt(varlogor(#1,#2))
-    }
-}
+\newpage
 
 \section{Results}
 
 \subsection{Power}
 
-%% \begin{figure}[h!]
-%% \centering
-%% \begin{tikzpicture}
-%% \begin{axis}[
-%%     width=14cm,
-%%     height=7cm,
-%%     xlabel={Scaling parameter},
-%%     ylabel={Power},
-%%     xmin=1, xmax=16,
-%%     ymin=0.4, ymax=1.0,
-%%     grid=major,
-%%     legend pos=south east
-%% ]
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{power_plot.png}
+    \caption{Power vs. control-to-case ratio}
+    \label{fig:power}
+\end{figure}
 
-%% \addplot[domain=1:16, samples=50] {power(50, 50*x)};
-%% \addlegendentry{Increase controls (fixed $n_1=50$)}
-
-%% \addplot[domain=1:16, samples=50, dashed] {power(50*x, 50*x)};
-%% \addlegendentry{Increase cases (balanced)}
-
-%% \addplot[domain=1:16, samples=50, dotted] {power(200/(1+x), 200*x/(1+x))};
-%% \addlegendentry{Fixed total $N=200$}
-
-%% \end{axis}
-%% \end{tikzpicture}
-
-%% \caption{Power comparison across study designs.}
-%% \end{figure}
+\newpage
 
 \subsection{Confidence Interval Width}
 
-%% \begin{figure}[h!]
-%% \centering
-%% \begin{tikzpicture}
-%% \begin{axis}[
-%%     width=14cm,
-%%     height=7cm,
-%%     xlabel={Scaling parameter},
-%%     ylabel={CI width (log OR)},
-%%     xmin=1, xmax=16,
-%%     ymin=0.5, ymax=2.5,
-%%     grid=major,
-%%     legend pos=north east
-%% ]
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{ci_width_plot.png}
+    \caption{Power vs. control-to-case ratio}
+    \label{fig:power}
+\end{figure}
 
-%% \addplot[domain=1:16, samples=50] {ciwidth(50, 50*x)};
-%% \addlegendentry{Increase controls (fixed $n_1=50$)}
-
-%% \addplot[domain=1:16, samples=50, dashed] {ciwidth(50*x, 50*x)};
-%% \addlegendentry{Increase cases (balanced)}
-
-%% \addplot[domain=1:16, samples=50, dotted] {ciwidth(200/(1+x), 200*x/(1+x))};
-%% \addlegendentry{Fixed total $N=200$}
-
-%% \end{axis}
-%% \end{tikzpicture}
-
-%% \caption{Confidence interval width for the log odds ratio. Narrower intervals indicate higher precision.}
-%% \end{figure}
 
 \section{Interpretation}
 
@@ -181,7 +95,9 @@ While increasing the number of controls in a case--control study typically yield
 
 When the exposure probability in controls ($p_0$) is very small, the variance contribution from the control group becomes large:
 \[
-\mathrm{Var}(\log \widehat{OR}) \supset \frac{1}{n_0 p_0}.
+\mathrm{Var}(\log OR) 
+= \frac{1}{n_1 p_1} + \frac{1}{n_1 (1 - p_1)} 
++ \frac{1}{n_0 p_0} + \frac{1}{n_0 (1 - p_0)}
 \]
 In such settings, increasing the number of controls can substantially reduce variance and improve power, even beyond the usual 4:1 control-to-case ratio rule of thumb.
 
@@ -199,7 +115,7 @@ Although gains in power plateau, additional controls still provide incremental i
 
 Even when power gains are small, increasing the number of controls reduces the width of the confidence interval:
 \[
-\text{CI width} \propto \sqrt{\mathrm{Var}(\log \widehat{OR})}.
+\text{CI width} \propto \sqrt{\mathrm{Var}(\log OR)}.
 \]
 
 This is important when:
@@ -241,5 +157,63 @@ Although balanced designs are statistically optimal for a fixed total sample siz
 \end{itemize}
 
 Thus, the choice of control-to-case ratio should reflect not only statistical efficiency, but also practical constraints and study objectives.
+
+\appendix
+\section{Interpretation of Model Parameters}
+
+This appendix describes the meaning of the parameters used in the power and sample size calculations for the case--control study.
+
+\begin{itemize}
+
+\item \textbf{Odds Ratio ($OR = 2$)} \\ The odds ratio represents the
+  strength of association between the exposure and the outcome. An
+  odds ratio of 2 indicates that the odds of exposure among cases are
+  twice the odds of exposure among controls. Formally,
+\[
+OR = \frac{ \frac{p_1}{1 - p_1} }{ \frac{p_0}{1 - p_0} },
+\]
+where $p_1$ is the exposure probability among cases and $p_0$ is the
+exposure probability among controls.
+
+\vspace{0.5em}
+
+\item \textbf{Control Exposure Probability ($p_0 = 0.2$)} \\
+This is the assumed prevalence of the exposure in the control group,
+which serves as a proxy for the exposure prevalence in the underlying
+source population. The value of $p_0$ determines the variance of the
+estimated odds ratio and therefore directly influences statistical
+power.
+
+\vspace{0.5em}
+
+\item \textbf{Significance Level ($\alpha = 0.05$)} \\
+The significance level $\alpha$ is the probability of a Type I error,
+i.e., rejecting the null hypothesis when it is true. A two-sided
+$\alpha = 0.05$ corresponds to a 5\% chance of falsely declaring an
+association when none exists.
+
+\vspace{0.5em}
+
+\item \textbf{Critical Value ($z_{0.975} = 1.96$)} \\
+The value $z_{0.975}$ is the 97.5th percentile of the standard normal
+distribution. It is used in two-sided hypothesis testing and
+confidence interval construction with $\alpha = 0.05$, since
+\[
+z_{1 - \alpha/2} = z_{0.975} \approx 1.96.
+\]
+This value defines the rejection threshold for the test statistic and
+determines the width of the confidence interval.
+
+\end{itemize}
+
+\noindent Together, these parameters determine the expected
+distribution of the log odds ratio estimator, its variance, and the
+resulting statistical power and confidence interval width in the study
+design.
+
+This topic is discussed in \cite{ferdous2022microbiome_power}.
+
+\bibliographystyle{plain}
+\bibliography{references}
 
 \end{document}
